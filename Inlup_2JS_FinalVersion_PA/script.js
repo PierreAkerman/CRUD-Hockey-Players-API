@@ -4,8 +4,8 @@ const sectionEdit = document.getElementById('sectionEdit');
 
 const playerTableBody = document.getElementById('playerTableBody');
 
-const submitNewPlayer = document.getElementById('submitNewPlayer')
-const submitEditPlayer = document.getElementById('submitEditPlayer')
+const submitNewPlayer = document.getElementById('submitNewPlayer');
+const submitEditPlayer = document.getElementById('submitEditPlayer');
 
 const newName = document.getElementById('newName');
 const newJersey = document.getElementById('newJersey');
@@ -20,14 +20,12 @@ const editBorn = document.getElementById('editBorn');
 const search = document.getElementById('search');
 const baseApi = "https://hockeyplayers.systementor.se/pirreakerman@gmail.com/player";
 
-
-const headers = document.getElementById('table').querySelectorAll('th>a');
-for (let header of headers) {
+const sortOnHeaders = document.getElementById('table').querySelectorAll('th>a');
+for (let header of sortOnHeaders) {
   header.addEventListener('click', () => {
     sort(header.id);
   })
 }
-
 
 class Player {
   constructor(id, name, jersey, age, born) {
@@ -69,12 +67,19 @@ submitNewPlayer.addEventListener("click", () => {
   createPlayer();
 });
 
+submitEditPlayer.addEventListener("click", () => {
+  editPlayer();
+});
 
-// Kan flyttas ut ----- //
+search.addEventListener("keyup", () => {
+  searchPlayer();
+});
+
+// ---Kan flyttas ut till modul--- //
 function createPlayer() {
   fetch(baseApi, {
     method: "POST",
-    headers: {
+    sortOnHeaders: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -84,7 +89,7 @@ function createPlayer() {
       born: newBorn.value,
     }),
   })
-    .then((res) => res.json())
+    .then((response) => response.json())
     .then((json) => {
       const player = new Player(
         json.id,
@@ -95,19 +100,16 @@ function createPlayer() {
       );
 
       players.push(player);
-      renderTr(player);
+      renderPlayer(player);
       showSection("sectionList");
     });
 }
 
-submitEditPlayer.addEventListener("click", () => {
-  editPlayer();
-});
-// Flytta ut -------!!!
+// ---Kan flyttas ut till modul--- //
 function editPlayer() {
   fetch(baseApi + "/" + editingPlayer.id, {
     method: "PUT",
-    headers: {
+    sortOnHeaders: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -125,13 +127,7 @@ function editPlayer() {
     });
 }
 
-
-
-
-search.addEventListener("keyup", () => {
-  searchPlayer();
-});
-// Kan Flyttas ut--------!!!!!!
+// ---Kan flyttas ut till modul--- //
 function searchPlayer(){
   const lowercase = search.value.toLowerCase();
 
@@ -140,13 +136,13 @@ function searchPlayer(){
   );
   playerTableBody.innerHTML = "";
   filteredList.forEach((player) => {
-    renderTr(player);
+    renderPlayer(player);
   });
 }
 
-
+let editingPlayer = null;
 function fillEditForm(id) {
-  let editingPlayer = players.find((player) => player.id == id)
+  editingPlayer = players.find((player) => player.id == id)
   editName.value = editingPlayer.name;
   editJersey.value = editingPlayer.jersey;
   editAge.value = editingPlayer.age;
@@ -154,7 +150,7 @@ function fillEditForm(id) {
   showSection('sectionEdit');
 }
 
-function renderTr(player) {
+function renderPlayer(player) {
   let jsCall = `fillEditForm(${player.id})`;
   let template = `<tr>
                         <td>${player.name}</td>
@@ -169,7 +165,7 @@ function renderTr(player) {
 function createTable() {
   playerTableBody.innerHTML = "";
   players.forEach(player => {
-    renderTr(player);
+    renderPlayer(player);
   });
 }
 
@@ -187,12 +183,18 @@ async function refreshPlayers() {
           player.born
         );
         const keys = Object.keys(p);
-        keys.forEach((key) => ascending[key] = false);
+        keys.forEach((key) => { ascending[key] = false });
         players.push(p);
       });
     });
 }
+  /*
+    Ascending är en array med booleaner
+    som säger vilken ordning som en header
+    ska sorteras på.
+  */
 
+  // Om ascending-arren med nyckeln är sann, ändra på riktning spelarna sorteras på
 function sort(key) {
   players.sort((player1, player2) => {
     if (player1[key] > player2[key]) {
@@ -202,26 +204,10 @@ function sort(key) {
     } else return 0;
   });
 
-  /*
-    Ascending är en array med booleaner
-    som säger vilken ordning som en header
-    ska sorteras på.
-  */
-
-  // Om ascending-arren med nyckeln är sann, ändra på riktning spelarna sorteras på
-
   if (ascending[key]) {
     players.reverse();
   }
-
   ascending[key] = !ascending[key];
-
-  ascending.forEach((temp) => {
-    if (temp !== key) {
-      ascending[temp] = false;
-    };
-  });
-
   playerTableBody.innerHTML = "";
   createTable();
 }
@@ -231,6 +217,5 @@ let ascending = [];
 refreshPlayers()
   .then(players => {
     createTable();
-    console.table(ascending);
     showSection('sectionList');
   });
